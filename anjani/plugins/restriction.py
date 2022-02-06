@@ -15,12 +15,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import asyncio
-from typing import Any, ClassVar, MutableMapping, Optional
+import time
+from typing import Any, ClassVar, MutableMapping, Optional, Union
 
 import bson
 from pyrogram.errors import PeerIdInvalid, UserNotParticipant
 from pyrogram.types import (
     CallbackQuery,
+    Chat,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     User,
@@ -52,6 +54,7 @@ class Restrictions(plugin.Plugin):
 
     @listener.filters(filters.regex(r"^rm_warn_(\d+)_(.*)"))
     async def on_callback_query(self, query: CallbackQuery) -> None:
+        """Remove warn callback data"""
         chat = query.message.chat
         user = query.matches[0].group(1)
         uid = query.matches[0].group(2)
@@ -92,47 +95,43 @@ class Restrictions(plugin.Plugin):
             ),
         )
 
-    async def kick(self, user: int, chat: int) -> None:
-        await self.bot.client.kick_chat_member(chat, user)
-        await asyncio.sleep(1)
-        await self.bot.client.unban_chat_member(chat, user)
-
     @command.filters(filters.can_restrict)
     async def cmd_kick(
-        self, ctx: command.Context, user: Optional[User] = None, *, reason: str = ""
+        self, ctx: command.Context, target: Union[User, Chat] = None, *, reason: str = ""
     ) -> str:
         """Kick chat member"""
         chat = ctx.chat
         reply_msg = ctx.msg.reply_to_message
 
-        if not user:
+        if not target:
             if ctx.args and not reply_msg:
                 return await self.text(chat.id, "err-peer-invalid")
 
-            if not reply_msg:
+            if not reply_msg or not (reply_msg.from_user or reply_msg.sender_chat):
                 return await self.text(chat.id, "no-kick-user")
 
-            user = reply_msg.from_user
+            target = reply_msg.from_user or reply_msg.sender_chat
             reason = ctx.input
 
         try:
-            target = await chat.get_member(user.id)
-            if util.tg.is_staff_or_admin(target):
-                return await self.text(chat.id, "admin-kick")
+            if isinstance(target, User):
+                target = await chat.get_member(target.id)
+                if util.tg.is_staff_or_admin(target):
+                    return await self.text(chat.id, "admin-kick")
         except UserNotParticipant:
-            if util.tg.is_staff(user.id):
+            if util.tg.is_staff(target.id):
                 return await self.text(chat.id, "admin-kick")
 
-        await self.kick(user.id, chat.id)
+        await self.bot.client.kick_chat_member(chat.id, target.id, until_date=int(time.time() + 30))
 
-        ret = await self.text(chat.id, "kick-done", user.first_name)
+        ret = await self.text(chat.id, "kick-done", target.first_name or target.title)
         if reason:
             ret += await self.text(chat.id, "kick-reason", reason)
         return ret
 
     @command.filters(filters.can_restrict)
     async def cmd_ban(
-        self, ctx: command.Context, user: Optional[User] = None, *, reason: str = ""
+        self, ctx: command.Context, user: Union[User, Chat] = None, *, reason: str = ""
     ) -> str:
         """Ban chat member"""
         chat = ctx.chat
@@ -142,10 +141,10 @@ class Restrictions(plugin.Plugin):
             if ctx.args and not reply_msg:
                 return await self.text(chat.id, "err-peer-invalid")
 
-            if not reply_msg:
+            if not reply_msg or not (reply_msg.from_user or reply_msg.sender_chat):
                 return await self.text(chat.id, "no-ban-user")
 
-            user = reply_msg.from_user
+            user = reply_msg.from_user or reply_msg.sender_chat
             reason = ctx.input
 
         try:
@@ -166,7 +165,7 @@ class Restrictions(plugin.Plugin):
         return ret
 
     @command.filters(filters.can_restrict)
-    async def cmd_unban(self, ctx: command.Context, user: Optional[User] = None) -> str:
+    async def cmd_unban(self, ctx: command.Context, user: Union[User, Chat] = None) -> str:
         """Unban chat member"""
         chat = ctx.chat
 
@@ -177,19 +176,20 @@ class Restrictions(plugin.Plugin):
             if not ctx.msg.reply_to_message:
                 return await self.text(chat.id, "unban-no-user")
 
-            user = ctx.msg.reply_to_message.from_user
+            user = ctx.msg.reply_to_message.from_user or ctx.msg.reply_to_message.sender_chat
 
         try:
             await chat.unban_member(user.id)
         except PeerIdInvalid:
             return await self.text(chat.id, "err-peer-invalid")
 
-        return await self.text(chat.id, "unban-done", user.first_name)
+        return await self.text(chat.id, "unban-done", user.first_name or user.title)
 
     @command.filters(filters.can_restrict)
     async def cmd_warn(
         self, ctx: command.Context, user: Optional[User] = None, *, reason: str = ""
     ) -> Optional[str]:
+        """Warn command chat member"""
         chat = ctx.chat
         reply_msg = ctx.msg.reply_to_message
         if not user:
