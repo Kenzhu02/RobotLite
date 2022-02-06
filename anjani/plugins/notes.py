@@ -1,5 +1,5 @@
 """Notes"""
-# Copyright (C) 2020 - 2021  UserbotIndo Team, <https://github.com/userbotindo.git>
+# Copyright (C) 2020 - 2022  UserbotIndo Team, <https://github.com/userbotindo.git>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -75,15 +75,10 @@ class Notes(plugin.Plugin):
     async def on_plugin_restore(self, chat_id: int, data: MutableMapping[str, Any]) -> None:
         await self.db.update_one({"chat_id": chat_id}, {"$set": data[self.name]}, upsert=True)
 
-    @listener.filters(filters.regex(r"^#[^\s]+"))
+    @listener.filters(filters.regex(r"^#[\w\-]+(?!\n)$"))
     async def on_message(self, message: Message) -> None:
         """Notes hashtag trigger."""
-        entity = message.entities
-        if not entity or entity and entity[0].type != "hashtag":
-            return
-
-        invoker = message.text[1 : entity[0].length]
-        await self.get_note(message, invoker)
+        return await self.get_note(message, message.text.lstrip("#"))
 
     async def get_note(self, message: Message, name: str, noformat: bool = False) -> None:
         """Get note data and send based on types."""

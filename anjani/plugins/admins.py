@@ -1,5 +1,5 @@
 """ Admin Plugin, Can manage your Group. """
-# Copyright (C) 2020 - 2021  UserbotIndo Team, <https://github.com/userbotindo.git>
+# Copyright (C) 2020 - 2022  UserbotIndo Team, <https://github.com/userbotindo.git>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -113,7 +113,7 @@ class Admins(plugin.Plugin):
             if member.user.is_deleted:
                 zombie += 1
                 try:
-                    await self.bot.client.kick_chat_member(chat.id, member.user.id)
+                    await self.bot.client.ban_chat_member(chat.id, member.user.id)
                 except UserAdminInvalid:
                     zombie -= 1
                 except FloodWait as flood:
@@ -125,9 +125,11 @@ class Admins(plugin.Plugin):
         return await self.text(chat.id, "cleaning-zombie", zombie)
 
     @command.filters(filters.can_promote)
-    async def cmd_promote(self, ctx: command.Context, user: Optional[User] = None) -> str:
+    async def cmd_promote(self, ctx: command.Context, user: Optional[User] = None) -> Optional[str]:
         """Bot promote member, required Both permission of can_promote"""
         chat = ctx.msg.chat
+        if not chat:
+            return
 
         if not user:
             if ctx.input:
@@ -137,6 +139,9 @@ class Admins(plugin.Plugin):
                 return await self.text(chat.id, "no-promote-user")
 
             user = ctx.msg.reply_to_message.from_user
+
+        if not user:  # Check again
+            return await self.text(chat.id, "no-promote-user")
 
         if user.id == ctx.author.id and ctx.input:
             return await self.text(chat.id, "promote-error-self")
@@ -165,9 +170,11 @@ class Admins(plugin.Plugin):
         return await self.text(chat.id, "promote-success")
 
     @command.filters(filters.can_promote)
-    async def cmd_demote(self, ctx: command.Context, user: Optional[User] = None) -> str:
+    async def cmd_demote(self, ctx: command.Context, user: Optional[User] = None) -> Optional[str]:
         """Demoter Just owner and promoter can demote admin."""
         chat = ctx.msg.chat
+        if not chat:
+            return
 
         if not user:
             if ctx.input:
@@ -177,6 +184,9 @@ class Admins(plugin.Plugin):
                 return await self.text(chat.id, "no-demote-user")
 
             user = ctx.msg.reply_to_message.from_user
+
+        if not user:  # Check again
+            return await self.text(chat.id, "no-demote-user")
 
         if user.id == ctx.author.id and ctx.input:
             return await self.text(chat.id, "demote-error-self")

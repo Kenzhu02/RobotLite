@@ -1,5 +1,5 @@
 """Anjani Errors Constructor"""
-# Copyright (C) 2020 - 2021  UserbotIndo Team, <https://github.com/userbotindo.git>
+# Copyright (C) 2020 - 2022  UserbotIndo Team, <https://github.com/userbotindo.git>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -26,9 +26,11 @@ __all__ = [
     "BackupError",
     "BadArgument",
     "BadBoolArgument",
+    "BadResult",
     "CommandHandlerError",
     "CommandInvokeError",
     "ConversionError",
+    "EventDispatchError",
     "ExistingCommandError",
     "ExistingPluginError",
     "PluginLoadError",
@@ -41,6 +43,10 @@ class AnjaniException(Exception):
 
 class BackupError(AnjaniException):
     """Unexpected backup data type"""
+
+
+class EventDispatchError(AnjaniException):
+    """Exception raised when a dispatcher raised an exception"""
 
 
 class CommandHandlerError(AnjaniException):

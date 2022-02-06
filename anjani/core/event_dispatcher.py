@@ -1,5 +1,5 @@
 """Anjani event dispatcher"""
-# Copyright (C) 2020 - 2021  UserbotIndo Team, <https://github.com/userbotindo.git>
+# Copyright (C) 2020 - 2022  UserbotIndo Team, <https://github.com/userbotindo.git>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -25,6 +25,7 @@ from pyrogram.raw import functions
 from pyrogram.types import CallbackQuery, InlineQuery, Message
 
 from anjani import plugin, util
+from anjani.error import EventDispatchError
 from anjani.listener import Listener, ListenerFunc
 
 from .anjani_mixin_base import MixinBase
@@ -43,9 +44,6 @@ class EventDispatcher(MixinBase):
     # Initialized during instantiation
     listeners: MutableMapping[str, MutableSequence[Listener]]
 
-    # Initialized runtime
-    __state: tuple[int, int]
-
     def __init__(self: "Anjani", **kwargs: Any) -> None:
         # Initialize listener map
         self.listeners = {}
@@ -63,7 +61,7 @@ class EventDispatcher(MixinBase):
         filters: Optional[Filter] = None,
     ) -> None:
         if event in {"load", "start", "started", "stop", "stopped"} and filters is not None:
-            self.log.warning(f"Built-in Listener can't be use with filters. Removing...")
+            self.log.warning("Built-in Listener can't be use with filters. Removing...")
             filters = None
 
         if getattr(func, "_cmd_filters", None):
@@ -161,6 +159,18 @@ class EventDispatcher(MixinBase):
         self.log.debug("Dispatching event '%s' with data %s", event, args)
         if wait:
             await asyncio.wait(tasks)
+            for task in tasks:
+                err = task.exception()  # Handle the future exception
+                if err:
+                    dispatcher_error = EventDispatchError(
+                        f"raised from {type(err).__name__}: {str(err)}"
+                    ).with_traceback(err.__traceback__)
+                    self.log.error(
+                        "Error dispatching event '%s'",
+                        event,
+                        exc_info=dispatcher_error,
+                    )
+                    return None
 
         if get_tasks:
             return tasks
@@ -171,10 +181,10 @@ class EventDispatcher(MixinBase):
         if not self.loaded or self._TelegramBot__running:
             return
 
+        api_id = sha256(self.config["api_id"].encode()).hexdigest()
         collection = self.db.get_collection("SESSION")
-        data = await collection.find_one(
-            {"_id": sha256(self.config["api_id"].encode()).hexdigest()}
-        )
+
+        data = await collection.find_one({"_id": api_id})
         if not data:
             return
 
@@ -211,7 +221,6 @@ class EventDispatcher(MixinBase):
                 # TO-DO
                 # 1. Change qts to 0, because we want to get all missed events
                 #    so we have a proper loop going on until DifferenceEmpty
-                # 2. __state proper handling
                 diff = await self.client.send(
                     functions.updates.GetDifference(pts=pts, date=date, qts=-1)
                 )
@@ -224,8 +233,8 @@ class EventDispatcher(MixinBase):
                         state: Any = diff.intermediate_state
 
                     pts, date = state.pts, state.date
-                    users = {u.id: u for u in diff.users}
-                    chats = {c.id: c for c in diff.chats}
+                    users = {u.id: u for u in diff.users}  # type: ignore
+                    chats = {c.id: c for c in diff.chats}  # type: ignore
 
                     await asyncio.wait(
                         (
@@ -233,25 +242,22 @@ class EventDispatcher(MixinBase):
                             send_missed_update(diff.other_updates, users, chats),
                         )
                     )
+                elif isinstance(diff, raw.types.updates.DifferenceEmpty):
+                    self.log.info("Missed event exhausted, you are up to date.")
+                    date = diff.date
+                    break
+                elif isinstance(diff, raw.types.updates.DifferenceTooLong):
+                    pts = diff.pts
+                    continue
                 else:
-                    if isinstance(diff, raw.types.updates.DifferenceEmpty):
-                        self.log.info("Missed events exhausted, you are up to date.")
-                        date = diff.date
-                        break
-                    elif isinstance(diff, raw.types.updates.DifferenceTooLong):
-                        pts = diff.pts
-                        self.log.debug(pts)
-                        continue
-
                     break
         except (ConnectionError, OSError, asyncio.CancelledError):
             pass
         finally:
-            self.__state = (pts, date)
             # Unset after we finished to avoid sending the same pts and date,
             # If GetState() doesn't executed on stop event
             await collection.update_one(
-                {"_id": sha256(self.config["api_id"].encode()).hexdigest()},
+                {"_id": api_id},
                 {"$unset": {"pts": "", "date": "", "qts": "", "seq": ""}},
             )
 

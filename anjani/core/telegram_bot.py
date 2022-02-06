@@ -1,5 +1,5 @@
 """Anjani base telegram"""
-# Copyright (C) 2020 - 2021  UserbotIndo Team, <https://github.com/userbotindo.git>
+# Copyright (C) 2020 - 2022  UserbotIndo Team, <https://github.com/userbotindo.git>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,11 +24,17 @@ import pyrogram.filters as flt
 from aiopath import AsyncPath
 from pyrogram import Client
 from pyrogram.filters import Filter
-from pyrogram.handlers import CallbackQueryHandler, InlineQueryHandler, MessageHandler
-from pyrogram.types import CallbackQuery, InlineQuery, Message, User
+from pyrogram.handlers import (
+    CallbackQueryHandler,
+    ChatMemberUpdatedHandler,
+    InlineQueryHandler,
+    MessageHandler,
+)
+from pyrogram.types import CallbackQuery, InlineQuery, User
 from yaml import full_load
 
 from anjani import util
+from anjani.util.types import Message
 from language import getLangFile
 
 from .anjani_mixin_base import MixinBase
@@ -37,7 +43,9 @@ if TYPE_CHECKING:
     from .anjani_bot import Anjani
 
 EventType = Union[CallbackQuery, InlineQuery, Message]
-TgEventHandler = Union[CallbackQueryHandler, InlineQueryHandler, MessageHandler]
+TgEventHandler = Union[
+    CallbackQueryHandler, InlineQueryHandler, MessageHandler, ChatMemberUpdatedHandler
+]
 
 
 class TelegramBot(MixinBase):
@@ -125,9 +133,12 @@ class TelegramBot(MixinBase):
             raise
 
         # Get info
-        user = await self.client.get_me()
+        async with asyncio.Lock():  # Lock to avoid race condition with command_dispatcher
+            user = await self.client.get_me()
+
         if not isinstance(user, User):
             raise TypeError("Missing full self user information")
+
         self.user = user
         # noinspection PyTypeChecker
         self.uid = user.id
@@ -138,13 +149,16 @@ class TelegramBot(MixinBase):
         async for doc in self.db.get_collection("STAFF").find():
             if doc["rank"] == "dev":
                 self.devs.add(doc["_id"])
+
             self.staff.add(doc["_id"])
+
         # Update global staff variable
         util.tg.STAFF.update(self.staff)
 
         # Update Language setting chat from db
         async for data in self.db.get_collection("LANGUAGE").find():
             self.chats_languages[data["chat_id"]] = data["language"]
+
         # Load text from language file
         async for language_file in getLangFile():
             self.languages[language_file.stem] = await util.run_sync(
@@ -234,6 +248,7 @@ class TelegramBot(MixinBase):
         self.update_plugin_event(
             "chat_action", MessageHandler, filters=flt.new_chat_members | flt.left_chat_member
         )
+        self.update_plugin_event("chat_member_update", ChatMemberUpdatedHandler)
         self.update_plugin_event("chat_migrate", MessageHandler, filters=flt.migrate_from_chat_id)
         self.update_plugin_event("inline_query", InlineQueryHandler)
         self.update_plugin_event(
@@ -287,6 +302,7 @@ class TelegramBot(MixinBase):
                 return await reference.reply_photo(photo, caption=text, **kwargs)
             if video := kwargs.pop("video", None):
                 return await reference.reply_video(video, caption=text, **kwargs)
+
             return await reference.reply(text, **kwargs)
 
         if text:

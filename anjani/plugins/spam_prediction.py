@@ -1,5 +1,5 @@
 """Spam Prediction plugin"""
-# Copyright (C) 2020 - 2021  UserbotIndo Team, <https://github.com/userbotindo.git>
+# Copyright (C) 2020 - 2022  UserbotIndo Team, <https://github.com/userbotindo.git>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -70,7 +70,10 @@ class SpamPrediction(plugin.Plugin):
         self.db = self.bot.db.get_collection("SPAM_DUMP")
         self.user_db = self.bot.db.get_collection("USERS")
         self.setting_db = self.bot.db.get_collection("SPAM_PREDICT_SETTING")
-        await self.__load_model(token, url)
+
+        # Avoid race conditions with on_message listener
+        async with asyncio.Lock():
+            await self.__load_model(token, url)
 
     async def on_chat_migrate(self, message: Message) -> None:
         await self.db.update_one(
@@ -123,6 +126,8 @@ class SpamPrediction(plugin.Plugin):
         return sha256(content.strip().encode()).hexdigest()
 
     def _build_hex(self, id: Optional[int]) -> str:
+        if not id:
+            id = self.bot.uid
         return md5((str(id) + self.bot.user.username).encode()).hexdigest()  # skipcq: PTC-W1003
 
     @staticmethod
@@ -395,7 +400,7 @@ class SpamPrediction(plugin.Plugin):
         if util.tg.is_staff_or_admin(target):
             return
 
-        if probability >= 0.9:
+        if probability >= 0.85:
             if from_ocr:
                 alert = (
                     f"❗️**PHOTO SPAM ALERT**❗️\n\n"
@@ -493,12 +498,14 @@ class SpamPrediction(plugin.Plugin):
         reply_msg = ctx.msg.reply_to_message
         if reply_msg:
             content = reply_msg.text or reply_msg.caption
-            if reply_msg.from_user.id != ctx.author.id:
+            if reply_msg.from_user and reply_msg.from_user.id != ctx.author.id:
                 user_id = reply_msg.from_user.id
+            elif reply_msg.forward_from:
+                user_id = reply_msg.forward_from.id
         else:
             content = ctx.input
 
-        if reply_msg.photo:
+        if reply_msg and reply_msg.photo:
             ocr_result = await self.runOcr(reply_msg)
             if ocr_result:
                 try:
@@ -514,7 +521,6 @@ class SpamPrediction(plugin.Plugin):
             return "Give me a text or reply to a message / forwarded message"
 
         identifier = self._build_hex(user_id)
-
         content_hash = self._build_hash(content)
         pred = await self._predict(content.strip())
         if pred.size == 0:

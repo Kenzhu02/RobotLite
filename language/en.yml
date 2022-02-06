@@ -24,11 +24,12 @@ markdown-helper: |
   Markdown is a very powerful formatting tool supported by telegram. {} has some enhancements, to make sure that saved messages are correctly parsed, and to allow you to create buttons.\n
   <b>Supported Markdown:</b>
   - <code>__italic__</code>: Double underscores will produce <i>italic</i> text.
-  - <code>**bold**</code>: Double asterisks will produce <b>bold</b> text
+  - <code>**bold**</code>: Double asterisks will produce <b>bold</b> text.
   - <code>`code`</code>: Backticks will produce <code>monospace</code> text.
-  - <code>~~strike~~</code>: Double tildes will produce <del>strikethrough</del> text
-  - <code>--underline--</code> Double Hyphen will produce <u>underline</u> text
-  - <code>[sometext](someURL)</code>: this will create a link - the message will just show sometext, and tapping on it will open the page at someURL.
+  - <code>~~strike~~</code>: Double tildes will produce <del>strikethrough</del> text.
+  - <code>--underline--</code> Double Hyphen will produce <u>underline</u> text.
+  - <code>||spoiler||</code>: Double pipes will produce <spoiler>spoiler</spoiler> text.
+  - <code>[sometext](someURL)</code>: this will create a link. the message will just show sometext, and tapping on it will open the page at someURL.
   EG: <code>[test](example.com)</code>
   - <code>[buttontext](buttonurl:someURL)</code>: This is the formatting to create a telegram button. buttontext will be what is displayed on the button, and someurl will be the url to redirect.
   EG: <code>[This is a button](buttonurl:google.com)</code>
@@ -39,6 +40,21 @@ markdown-helper: |
   This will create two buttons on a single line, instead of one button per line.
 
   Keep in mind that your message <b>MUST</b> contain some text other than just a button!
+filling-format-helper: |
+  You can customize the content of a text with the event context as well. For example, you want to mention user who joined the chat.
+
+  Supported filling format:
+  - `{first}`: The users first name.
+  - `{last}`: The users last name.
+  - `{fullname}`: The users full name.
+  - `{username}`: The users username. Mention if user doesn't have a username.
+  - `{mention}`: Mentions the user.
+  - `{id}`: The users id.
+  - `{chatname}`: The current chat name.
+  - `{count}`: The count the chat members.
+
+  Example
+  -> `Hey {first}, how are you? Welcome to {chatname}`
 #endregion
 #region admin
 admins-button: Admins
@@ -142,7 +158,7 @@ fed-delete-canceled: Federation deletion canceled
 fed-delete-done: I have deleted your Federation!\nAll groups that connect to **{}** are now federation-less.
 fed-cant-two-feds: You cannot join two federations in one chat!
 fed-invalid-id: Please enter a valid federation ID
-fed-invalid-user-id: Please enter a valid user ID
+fed-invalid-user-id: "Please enter a valid user ID\nUsage: `/fstats <user_id> <fed_id>`"
 fed-already-connected: This group is already connected to that federation!
 fed-chat-joined-info: Chat joined to **{}** Federation!
 fed-not-connected: This chat isn't connected to that federation!
@@ -165,6 +181,7 @@ fed-info-text: |
   **Creator: **{}
   **Total Admins: ** `{}`
   **Total banned user: ** `{}`
+  **Total banned channel: ** `{}`
   **Total groups connected: ** `{}`
 fed-admin-only: Only federation admin can do this!
 fed-admin-text: |
@@ -218,6 +235,7 @@ fed-log-set-chnl: "This channel has been set as the fed log for **{}**\nall fed 
 fed-invalid-identity: The user who clicked confirmation button was not the fed creator.\nOnly the federation creator can set the fed log.
 fed-log-unset: Federation log of **{}** is unset.
 fed-autoban: "User {} is banned in the current federation (**{}**), and has been removed.\n**Reason:** {}\n**Banned on:** {}"
+fed-autoleave: "I no longger have permission to ban members in this chat. Leaving fed \"{}\"(`{}`)"
 #endregion
 #region language
 language-button: Language
@@ -403,9 +421,10 @@ rules-help: |
 rules-blank-err: Rules can't be blank!
 rules-set: "Chat rules have been set!\nLink to view rules: `{}`"
 rules-clear: Successfully cleared chat rules!
-rules-none: This group have no rules set yet!
+rules-none: Failed to get chat rules! No records found.
 rules-view-caption: Click this button to view the chat rules!
 rules-view-pm: "The rules for **{}** are:\n\n"
+rules-invalid-button: "Invalid chat_id: \"{}\". (__Invalid Syntax__)"
 #endregion
 #region spam prediction
 spampredict-button: Spam Prediction
@@ -460,6 +479,8 @@ greetings-help: |
   × /cleanservice <on/off> : Clean 'user is joined' service messages automatically.\n
   **Notes**:\nto get the message with no-format add "noformat" at the end
   Example: `/welcome noformat`
+
+  Check /markdownhelp and /fillinghelp for formatting details.
 bot-added: |
   Hi... Thanks for inviting me.
   To see available commands type /help.
@@ -500,5 +521,6 @@ err-invalid-pid: Invalid identifier!
 err-anonymous: You are on anonymous mode...\n\n__Disable it first.__
 err-not-admin: You are not an Administrator of this group...
 err-perm: You and I need permission of __{}__, to be able to use the command.
-err-unexpected: "An unexpected error occurred.! \n\n**Error:** `{}` "
+err-unexpected: "An unexpected error occurred.! \n\n**Error:** `{}`"
+err-msg-format-parsing: "**Message format parsing error!**\n**Error on key:** `{err}`."
 #endregion

@@ -1,5 +1,5 @@
 """Anjani database init"""
-# Copyright (C) 2020 - 2021  UserbotIndo Team, <https://github.com/userbotindo.git>
+# Copyright (C) 2020 - 2022  UserbotIndo Team, <https://github.com/userbotindo.git>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -14,9 +14,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from .client import AsyncClient
-from .collection import AsyncCollection
-from .cursor import AsyncCursor
-from .db import AsyncDatabase
+from .client import AsyncClient  # skipcq: PY-W2000
+from .collection import AsyncCollection  # skipcq: PY-W2000
+from .cursor import AsyncCursor  # skipcq: PY-W2000
+from .db import AsyncDatabase  # skipcq: PY-W2000
 
 __all__ = ["AsyncClient", "AsyncCollection", "AsyncCursor", "AsyncDatabase"]

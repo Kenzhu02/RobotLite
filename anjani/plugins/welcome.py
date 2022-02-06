@@ -1,5 +1,5 @@
 """Bot Greetings"""
-# Copyright (C) 2020 - 2021  UserbotIndo Team, <https://github.com/userbotindo.git>
+# Copyright (C) 2020 - 2022  UserbotIndo Team, <https://github.com/userbotindo.git>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -102,7 +102,9 @@ class Greeting(plugin.Plugin):
                         reply_to_message_id=reply_to,
                     )
                 else:
-                    if await self.fed.is_active(chat.id) and await self.fed.is_banned(new_member.id):
+                    if await self.fed.is_active(chat.id) and await self.fed.is_banned(
+                        new_member.id
+                    ):
                         continue
 
                     text, button = await self.welc_message(chat.id)
@@ -157,7 +159,7 @@ class Greeting(plugin.Plugin):
             first=escape(first_name),
             last=escape(last_name) if last_name else "",
             fullname=escape(full_name),
-            username=f"@{user.username}" if user.username else escape(first_name),
+            username=f"@{user.username}" if user.username else util.tg.mention(user),
             mention=util.tg.mention(user),
             count=chat.members_count,
             chatname=escape(chat.title),
@@ -205,6 +207,7 @@ class Greeting(plugin.Plugin):
     async def set_custom_welcome(self, chat_id: int, text: Str) -> None:
         """Set custom welcome"""
         msg, button = util.tg.parse_button(text.markdown)
+        # print(msg)
         await self.db.update_one(
             {"chat_id": chat_id},
             {"$set": {"custom_welcome": msg, "button": button}},
@@ -265,6 +268,11 @@ class Greeting(plugin.Plugin):
             return await self.text(chat.id, "error-reply-to-message")
 
         reply_msg = ctx.msg.reply_to_message
+        try:  # Try to build a text first to check message validity
+            self._build_text(reply_msg.text, ctx.author, chat)
+        except KeyError as e:
+            return await self.text(chat.id, "err-msg-format-parsing", err=e)
+
         ret, _ = await asyncio.gather(
             self.text(chat.id, "cust-welcome-set"), self.set_custom_welcome(chat.id, reply_msg.text)
         )

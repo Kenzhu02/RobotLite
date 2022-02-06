@@ -1,5 +1,5 @@
 """Chat SpamShield"""
-# Copyright (C) 2020 - 2021  UserbotIndo Team, <https://github.com/userbotindo.git>
+# Copyright (C) 2020 - 2022  UserbotIndo Team, <https://github.com/userbotindo.git>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -174,7 +174,7 @@ class SpamShield(plugin.Plugin):
     async def ban(self, chat: Chat, user: User, reason: str) -> None:
         fullname = user.first_name + user.last_name if user.last_name else user.first_name
         await asyncio.gather(
-            chat.kick_member(user.id),
+            chat.ban_member(user.id),
             self.federation_db.update_one(
                 {"_id": "AnjaniSpamShield"},
                 {

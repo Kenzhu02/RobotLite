@@ -1,5 +1,5 @@
 """Member muting plugin"""
-# Copyright (C) 2020 - 2021  UserbotIndo Team, <https://github.com/userbotindo.git>
+# Copyright (C) 2020 - 2022  UserbotIndo Team, <https://github.com/userbotindo.git>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -47,7 +47,7 @@ class Muting(plugin.Plugin):
         if member is None:
             if ctx.args and not ctx.args[0].endswith(("s", "m", "h")):
                 return await self.text(chat_id, "no-mute-user")
-            if ctx.msg.reply_to_message:
+            if ctx.msg.reply_to_message and ctx.msg.reply_to_message.from_user:
                 try:
                     member = await self.bot.client.get_chat_member(
                         chat_id, ctx.msg.reply_to_message.from_user.id
@@ -91,7 +91,7 @@ class Muting(plugin.Plugin):
         if member is None:
             if ctx.args:
                 return await self.text(chat_id, "err-peer-invalid")
-            if ctx.msg.reply_to_message:
+            if ctx.msg.reply_to_message and ctx.msg.reply_to_message.from_user:
                 member = await self.bot.client.get_chat_member(
                     chat_id, ctx.msg.reply_to_message.from_user.id
                 )

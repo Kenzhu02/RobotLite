@@ -1,5 +1,5 @@
 """Anjani telegram utils"""
-# Copyright (C) 2020 - 2021  UserbotIndo Team, <https://github.com/userbotindo.git>
+# Copyright (C) 2020 - 2022  UserbotIndo Team, <https://github.com/userbotindo.git>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -127,14 +127,14 @@ def parse_button(text: str) -> Tuple[str, Button]:
 
     parser_data += text[prev:]
     # Remove any markdown button left over if any
-    t = parser_data.rstrip().split()
-    if t:
-        pattern = re.compile(r"[_-`*~]+")
-        anyMarkdownLeft = pattern.search(t[-1])
-        if anyMarkdownLeft:
-            toRemove = anyMarkdownLeft[0][0]
-            t[-1] = t[-1].replace(toRemove, "")
-            return " ".join(t), buttons
+    # t = parser_data.rstrip().split()
+    # if t:
+    #     pattern = re.compile(r"[_-`*~]+")
+    #     anyMarkdownLeft = pattern.search(t[-1])
+    #     if anyMarkdownLeft:
+    #         toRemove = anyMarkdownLeft[0][0]
+    #         t[-1] = t[-1].replace(toRemove, "")
+    #         return " ".join(t), buttons
 
     return parser_data.rstrip(), buttons
 
@@ -288,7 +288,7 @@ def __loop_safe(
     @wraps(func)
     async def wrapper(
         bot: "Anjani",
-        chat_id: int,
+        chat_id: Optional[int],
         text_name: str,
         *args: Any,
         noformat: bool = False,
@@ -301,6 +301,7 @@ def __loop_safe(
                 The bot instance.
             chat_id (`int`):
                 Id of the sender(PM's) or chat_id to fetch the user language setting.
+                If chat_id is None, the language will always use 'en'.
             text_name (`str`):
                 String name to parse. The string is parsed from YAML documents.
             *args (`any`, *Optional*):
@@ -320,7 +321,12 @@ def __loop_safe(
 
 @__loop_safe
 def get_text(
-    bot: "Anjani", chat_id: int, text_name: str, *args: Any, noformat: bool = False, **kwargs: Any
+    bot: "Anjani",
+    chat_id: Optional[int],
+    text_name: str,
+    *args: Any,
+    noformat: bool = False,
+    **kwargs: Any,
 ) -> str:
     def _get_text(lang: str) -> str:
         try:
