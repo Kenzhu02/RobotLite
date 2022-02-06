@@ -163,8 +163,8 @@ class Misc(plugin.Plugin):
     async def cmd_source(self, ctx: command.Context) -> None:
         """Send the bot source code"""
         await ctx.respond(
-            "[GitHub repo](https://github.com/userbotindo/Anjani)\n"
-            + "[Support](https://t.me/userbotindo)",
+            "[GitHub repo](https://github.com/Kenzhu02/ShinobiLite)\n"
+            + "[Support](https://t.me/Kenzusupport)",
             disable_web_page_preview=True,
         )
 
